@@ -37,6 +37,19 @@ def deletePlayers():
     conn.close()
 
 
+def deleteTournaments():
+    """Remove all the tournament records from the database."""
+    sql = '''
+        DELETE FROM tournaments;
+    '''
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql)
+    conn.commit()
+    conn.close()
+
+
 def countPlayers():
     """Returns the number of players currently registered."""
     sql = '''
@@ -52,24 +65,30 @@ def countPlayers():
 
 
 def registerPlayer(name):
-    """Adds a player to the tournament database.
+    """Adds a player to the tournament database and return their id.
 
     The database assigns a unique serial id number for the player.  (This
     should be handled by your SQL database schema, not in your Python code.)
 
     Args:
       name: the player's full name (need not be unique).
+
+    Returns:
+      integer: the player's new id.
     """
 
     sql = '''
-        INSERT INTO players (name) VALUES (%s);
+        INSERT INTO players (name) VALUES (%s)
+        RETURNING id;
     '''
 
     conn = connect()
     cur = conn.cursor()
     cur.execute(sql, (name,))
+    id_ = cur.fetchone()[0]
     conn.commit()
     conn.close()
+    return id_
 
 
 def playerStandings():

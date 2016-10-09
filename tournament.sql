@@ -15,6 +15,13 @@ CREATE TABLE matches (
 );
 
 
+CREATE TABLE tournaments (
+    id      serial PRIMARY KEY,
+    name    varchar(40) NOT NULL,
+    winner  integer REFERENCES players (id)
+);
+
+
 CREATE VIEW standings AS
 SELECT players.id, players.name, count(CASE WHEN players.id = matches.winner then 1 END) AS wins, count(matches.id) AS matches_played
 FROM players LEFT JOIN matches

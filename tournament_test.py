@@ -48,6 +48,7 @@ def testStandingsBeforeMatches():
     to any matches being reported.
     """
     deleteMatches()
+    deleteTournaments()
     deletePlayers()
     registerPlayer("Melpomene Murray")
     registerPlayer("Randy Schwartz")
@@ -75,12 +76,10 @@ def testReportMatches():
     """
     deleteMatches()
     deletePlayers()
-    registerPlayer("Bruno Walton")
-    registerPlayer("Boots O'Neal")
-    registerPlayer("Cathy Burton")
-    registerPlayer("Diane Grant")
-    standings = playerStandings()
-    [id1, id2, id3, id4] = [row[0] for row in standings]
+    id1 = registerPlayer("Bruno Walton")
+    id2 = registerPlayer("Boots O'Neal")
+    id3 = registerPlayer("Cathy Burton")
+    id4 = registerPlayer("Diane Grant")
     reportMatch(id1, id2)
     reportMatch(id3, id4)
     standings = playerStandings()
