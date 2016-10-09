@@ -87,18 +87,18 @@ def playerStandings():
     """
 
     sql = '''
-        SELECT players.id, players.name, count(CASE WHEN players.id = matches.winner then 1 END), count(matches.id)
+        SELECT players.id, players.name, count(CASE WHEN players.id = matches.winner then 1 END) as wins, count(matches.id)
         FROM players LEFT JOIN matches
         ON players.id = matches.winner
         OR players.id = matches.loser
-        GROUP BY players.id;
+        GROUP BY players.id
+        ORDER BY wins DESC;
     '''
 
     conn = connect()
     cur = conn.cursor()
     cur.execute(sql)
     results = cur.fetchall()
-    print(results)
     conn.close()
     return results
 
@@ -123,17 +123,14 @@ def reportMatch(winner, loser):
     conn.close()
 
 
-
- 
- 
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
-  
+
     Assuming that there are an even number of players registered, each player
     appears exactly once in the pairings.  Each player is paired with another
     player with an equal or nearly-equal win record, that is, a player adjacent
     to him or her in the standings.
-  
+
     Returns:
       A list of tuples, each of which contains (id1, name1, id2, name2)
         id1: the first player's unique id
@@ -141,5 +138,4 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-
 
