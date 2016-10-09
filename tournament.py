@@ -87,18 +87,18 @@ def playerStandings():
     """
 
     sql = '''
-        SELECT players.id, players.name, count(matches.winner), count(matches.id)
+        SELECT players.id, players.name, count(CASE WHEN players.id = matches.winner then 1 END), count(matches.id)
         FROM players LEFT JOIN matches
         ON players.id = matches.winner
         OR players.id = matches.loser
-        GROUP BY players.id
-        ;
+        GROUP BY players.id;
     '''
 
     conn = connect()
     cur = conn.cursor()
     cur.execute(sql)
     results = cur.fetchall()
+    print(results)
     conn.close()
     return results
 
