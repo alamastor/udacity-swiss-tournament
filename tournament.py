@@ -87,12 +87,7 @@ def playerStandings():
     """
 
     sql = '''
-        SELECT players.id, players.name, count(CASE WHEN players.id = matches.winner then 1 END) as wins, count(matches.id)
-        FROM players LEFT JOIN matches
-        ON players.id = matches.winner
-        OR players.id = matches.loser
-        GROUP BY players.id
-        ORDER BY wins DESC;
+        SELECT * FROM standings;
     '''
 
     conn = connect()
@@ -139,10 +134,34 @@ def swissPairings():
         name2: the second player's name
     """
 
+    # Check round is complete
+    if not roundComplete():
+        raise RuntimeError(
+            'Round not complete, complete it before calling swissPairings'
+        )
     standings = playerStandings()
 
     result = []
     while standings:
         player1, player2 = standings.pop(), standings.pop()
         result.append((player1[0], player1[1], player2[0], player2[1]))
+    return result
+
+
+def roundComplete():
+    """Returns whether all players have played the same number of games.
+
+    Returns:
+        boolean: Is the round complete?
+    """
+
+    sql = '''
+        SELECT (SELECT max(matches_played) from standings) = ALL (SELECT matches_played FROM standings);
+    '''
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql)
+    result = cur.fetchall()[0][0]
+    conn.close()
     return result

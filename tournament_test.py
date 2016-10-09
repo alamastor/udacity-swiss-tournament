@@ -125,6 +125,12 @@ def testPairings():
             "For eight players, swissPairings should return 4 pairs. Got {pairs}".format(pairs=len(pairings)))
     reportMatch(id1, id2)
     reportMatch(id3, id4)
+    try:
+        swissPairings()
+    except RuntimeError:
+        print('10. swissPairings raised error with incomplete round as expected.')
+    else:
+        raise ValueError('swissPairings should throw error for incomplete round')
     reportMatch(id5, id6)
     reportMatch(id7, id8)
     pairings = swissPairings()
@@ -144,7 +150,7 @@ def testPairings():
         if pair not in possible_pairs:
             raise ValueError(
                 "After one match, players with one win should be paired.")
-    print "10. After one match, players with one win are properly paired."
+    print "11. After one match, players with one win are properly paired."
 
 
 if __name__ == '__main__':

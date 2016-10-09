@@ -13,3 +13,12 @@ CREATE TABLE matches (
     loser integer REFERENCES players (id),
     CHECK (winner != loser)
 );
+
+
+CREATE VIEW standings AS
+SELECT players.id, players.name, count(CASE WHEN players.id = matches.winner then 1 END) AS wins, count(matches.id) AS matches_played
+FROM players LEFT JOIN matches
+ON players.id = matches.winner
+OR players.id = matches.loser
+GROUP BY players.id
+ORDER BY wins DESC;
