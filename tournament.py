@@ -21,12 +21,13 @@ def deletePlayers():
 
 def countPlayers():
     """Returns the number of players currently registered."""
-    conn = connect()
-    cur = conn.cursor()
-    query = '''
+    sql = '''
         SELECT count(*) FROM players;
     '''
-    cur.execute(query)
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql)
     result = cur.fetchone()[0]
     conn.close()
     return result
@@ -34,10 +35,10 @@ def countPlayers():
 
 def registerPlayer(name):
     """Adds a player to the tournament database.
-  
+
     The database assigns a unique serial id number for the player.  (This
     should be handled by your SQL database schema, not in your Python code.)
-  
+
     Args:
       name: the player's full name (need not be unique).
     """
