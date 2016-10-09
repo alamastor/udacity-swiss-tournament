@@ -67,7 +67,7 @@ def registerPlayer(name):
 
     conn = connect()
     cur = conn.cursor()
-    cur.execute(sql, [name])
+    cur.execute(sql, (name,))
     conn.commit()
     conn.close()
 
