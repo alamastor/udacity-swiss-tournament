@@ -7,18 +7,28 @@ CREATE TABLE players (
 );
 
 
-CREATE TABLE matches (
-    id      serial PRIMARY KEY,
-    winner integer REFERENCES players (id),
-    loser integer REFERENCES players (id),
-    CHECK (winner != loser)
-);
-
-
 CREATE TABLE tournaments (
     id      serial PRIMARY KEY,
     name    varchar(40) NOT NULL,
     winner  integer REFERENCES players (id)
+);
+
+
+CREATE TABLE tournament_players (
+    tourn   integer REFERENCES tournaments NOT NULL,
+    player  integer REFERENCES players (id) NOT NULL,
+    UNIQUE (tourn, player)
+);
+
+
+CREATE TABLE matches (
+    id      serial PRIMARY KEY,
+    tourn   integer REFERENCES tournaments (id) NOT NULL,
+    winner  integer NOT NULL,
+    loser   integer,
+    CHECK (winner != loser),
+    FOREIGN KEY (tourn, winner) REFERENCES tournament_players (tourn, player),
+    FOREIGN KEY (tourn, loser) REFERENCES tournament_players (tourn, player)
 );
 
 

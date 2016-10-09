@@ -50,6 +50,19 @@ def deleteTournaments():
     conn.close()
 
 
+def deleteTournamentPlayers():
+    """Remove all the records from the tournament_players table."""
+    sql = '''
+        DELETE FROM tournament_players;
+    '''
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql)
+    conn.commit()
+    conn.close()
+
+
 def countPlayers():
     """Returns the number of players currently registered."""
     sql = '''
@@ -62,6 +75,49 @@ def countPlayers():
     result = cur.fetchone()[0]
     conn.close()
     return result
+
+
+def countTournamentPlayers(tournId):
+    """Returns the number of players currently registered for tournament.
+
+    Args:
+        tournId: the id of the tournament.
+    """
+    sql = '''
+        SELECT count(*) FROM tournament_players;
+    '''
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql)
+    result = cur.fetchone()[0]
+    conn.close()
+    return result
+    return 0
+
+
+def registerTournament(name):
+    """Adds a tournament to the tournament database and return it's id.
+
+    Args:
+      name: the tournament's full name (need not be unique).
+
+    Returns:
+      integer: the tournament's new id.
+    """
+
+    sql = '''
+        INSERT INTO tournaments (name) VALUES (%s)
+        RETURNING id;
+    '''
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql, (name,))
+    id_ = cur.fetchone()[0]
+    conn.commit()
+    conn.close()
+    return id_
 
 
 def registerPlayer(name):
@@ -91,11 +147,34 @@ def registerPlayer(name):
     return id_
 
 
-def playerStandings():
+def registerPlayerForTournament(tournId, playerId):
+    """Adds a player to a tournament.
+
+    Args:
+      tournId: a tournament's id.
+      playerId: a player's id.
+    """
+
+    sql = '''
+        INSERT INTO tournament_players (tourn, player)
+        VALUES (%s, %s);
+    '''
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql, (tournId, playerId))
+    conn.commit()
+    conn.close()
+
+
+def playerStandings(tournId):
     """Returns a list of the players and their win records, sorted by wins.
 
     The first entry in the list should be the player in first place, or a player
     tied for first place if there is currently a tie.
+
+    Args:
+      tournId: the tournament to get standings for.
 
     Returns:
       A list of tuples, each of which contains (id, name, wins, matches):
@@ -117,7 +196,7 @@ def playerStandings():
     return results
 
 
-def reportMatch(winner, loser):
+def reportMatch(tourn, winner, loser):
     """Records the outcome of a single match between two players.
 
     Args:
@@ -126,18 +205,18 @@ def reportMatch(winner, loser):
     """
 
     sql = '''
-        INSERT INTO matches (winner, loser)
-        VALUES (%s, %s);
+        INSERT INTO matches (tourn, winner, loser)
+        VALUES (%s, %s, %s);
     '''
 
     conn = connect()
     cur = conn.cursor()
-    cur.execute(sql, (winner, loser))
+    cur.execute(sql, (tourn, winner, loser))
     conn.commit()
     conn.close()
 
 
-def swissPairings():
+def swissPairings(tournId):
     """Returns a list of pairs of players for the next round of a match.
 
     Assuming that there are an even number of players registered, each player
@@ -158,7 +237,7 @@ def swissPairings():
         raise RuntimeError(
             'Round not complete, complete it before calling swissPairings'
         )
-    standings = playerStandings()
+    standings = playerStandings(tournId)
 
     sql = '''
         SELECT id, name
