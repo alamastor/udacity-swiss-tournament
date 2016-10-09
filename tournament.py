@@ -17,6 +17,15 @@ def deleteMatches():
 
 def deletePlayers():
     """Remove all the player records from the database."""
+    sql = '''
+        DELETE FROM players;
+    '''
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql)
+    conn.commit()
+    conn.close()
 
 
 def countPlayers():
@@ -67,6 +76,23 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+
+    sql = '''
+        SELECT players.id, players.name, count(matches.winner), count(matches.id)
+        FROM players LEFT JOIN matches
+        ON players.id = matches.player1
+        OR players.id = matches.player2
+        GROUP BY players.id
+        ;
+    '''
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql)
+    results = cur.fetchall()
+    print(results)
+    conn.close()
+    return results
 
 
 def reportMatch(winner, loser):
