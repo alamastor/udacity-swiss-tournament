@@ -141,10 +141,22 @@ def swissPairings():
         )
     standings = playerStandings()
 
+    sql = '''
+        SELECT id, name
+        FROM standings
+        ;
+    '''
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql)
     result = []
-    while standings:
-        player1, player2 = standings.pop(), standings.pop()
-        result.append((player1[0], player1[1], player2[0], player2[1]))
+
+    pair = cur.fetchmany(2)
+    while pair:
+        player1, player2 = pair
+        result.append(player1 + player2)
+        pair = cur.fetchmany(2)
     return result
 
 
