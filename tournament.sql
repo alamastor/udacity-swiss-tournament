@@ -9,9 +9,7 @@ CREATE TABLE players (
 
 CREATE TABLE matches (
     id      serial PRIMARY KEY,
-    player1 integer REFERENCES players (id),
-    player2 integer REFERENCES players (id),
-    winner  integer REFERENCES players (id),
-    CHECK (player1 != player2),
-    CHECK (winner = player1 or winner = player2)
+    winner integer REFERENCES players (id),
+    loser integer REFERENCES players (id),
+    CHECK (winner != loser)
 );

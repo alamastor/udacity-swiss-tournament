@@ -80,8 +80,8 @@ def playerStandings():
     sql = '''
         SELECT players.id, players.name, count(matches.winner), count(matches.id)
         FROM players LEFT JOIN matches
-        ON players.id = matches.player1
-        OR players.id = matches.player2
+        ON players.id = matches.winner
+        OR players.id = matches.loser
         GROUP BY players.id
         ;
     '''
@@ -90,7 +90,6 @@ def playerStandings():
     cur = conn.cursor()
     cur.execute(sql)
     results = cur.fetchall()
-    print(results)
     conn.close()
     return results
 
@@ -102,6 +101,7 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
+
  
  
 def swissPairings():
