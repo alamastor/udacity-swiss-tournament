@@ -139,3 +139,10 @@ def swissPairings():
         name2: the second player's name
     """
 
+    standings = playerStandings()
+
+    result = []
+    while standings:
+        player1, player2 = standings.pop(), standings.pop()
+        result.append((player1[0], player1[1], player2[0], player2[1]))
+    return result
