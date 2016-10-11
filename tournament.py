@@ -89,12 +89,14 @@ def countTournamentPlayers(tournId):
         tournId: the id of the tournament.
     """
     sql = '''
-        SELECT count(*) FROM tournament_players;
+        SELECT count(*)
+        FROM tournament_players
+        WHERE tourn=%s;
     '''
 
     conn = connect()
     cur = conn.cursor()
-    cur.execute(sql)
+    cur.execute(sql, (tournId,))
     result = cur.fetchone()[0]
     conn.close()
     return result
@@ -189,12 +191,13 @@ def playerStandings(tournId):
     """
 
     sql = '''
-        SELECT * FROM standings;
+        SELECT id, name, wins, matches_played
+        FROM standings
+        WHERE tourn=%s;
     '''
-
     conn = connect()
     cur = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
-    cur.execute(sql)
+    cur.execute(sql, (tournId,))
     results = cur.fetchall()
     conn.close()
     return results
@@ -226,10 +229,20 @@ def reportMatch(tourn, winner, loser=None):
 def swissPairings(tournId):
     """Returns a list of pairs of players for the next round of a match.
 
-    Assuming that there are an even number of players registered, each player
-    appears exactly once in the pairings.  Each player is paired with another
-    player with an equal or nearly-equal win record, that is, a player adjacent
-    to him or her in the standings.
+    Each player is paired with another player with an equal or nearly-equal
+    win record, that is, a player adjacent to him or her in the standings.
+    Rematches are guaranteed not to occur, and if there is an odd number of
+    players then one player will randomly be selected to have bye (automatic
+    win). Each play will only recieve one bye per tournament.
+
+    To find optimal pairings, all non-rematch pairings are represented as edges
+    in graph of player nodes, with edges weighted inversely proportionaly to the
+    difference in wins between the two players. The maximum weighted pairings
+    are then calculated use the algorithm found at:
+    http://jorisvr.nl/article/maximum-matching
+    This approach was inspired by this article:
+    https://www.leaguevine.com/blog/18/swiss-tournament-scheduling-leaguevines-new-algorithm/
+    NOTE: This algorithm is O(n^3)
 
     Returns:
       A list of tuples, each of which contains (id1, name1, id2, name2)
@@ -240,7 +253,7 @@ def swissPairings(tournId):
     """
 
     # Check round is complete
-    if not roundComplete():
+    if not roundComplete(tournId):
         raise RuntimeError(
             'Round not complete, complete it before calling swissPairings'
         )
@@ -251,11 +264,13 @@ def swissPairings(tournId):
     if len(standings) % 2 != 0:
         players = set(standings)
         while players:
+            # Randomly select player for bye.
             player = random.sample(players, 1)[0]
             if not hadBye(tournId, player.id):
                 byePlayer = player
                 break
             else:
+                # Player has already had bye, try again.
                 players.remove(player)
         else:
             # For some all players have had bye, should never happen!
@@ -268,7 +283,7 @@ def swissPairings(tournId):
 
     # Generate edges
     edges = []
-    # Iterate of all possible matchups.
+    # Iterate of all possible matchups, to build edges in graph.
     for i in range(len(standings)):
         for j in range(i + 1, len(standings)):
             player = standings[i]
@@ -280,6 +295,10 @@ def swissPairings(tournId):
                 weight = player.matches_played - difference_in_wins
                 edges.append((i, j, weight))
 
+    # Algorithm returns results as list, where the each value represents
+    # the opponent of each index, eg.
+    # [2, 3, 0, 1] mean player 0 plays player 2 and player 1 plays player 3.
+    # Now convert this list into list of pairings.
     matches_list = maxWeightMatching(edges, maxcardinality=True)
     for player_idx, opponent_idx in enumerate(matches_list):
         if player_idx > opponent_idx:
@@ -290,7 +309,7 @@ def swissPairings(tournId):
     return pairings
 
 
-def roundComplete():
+def roundComplete(tourn):
     """Returns whether all players have played the same number of games.
 
     Returns:
@@ -298,12 +317,18 @@ def roundComplete():
     """
 
     sql = '''
-        SELECT (SELECT max(matches_played) from standings) = ALL (SELECT matches_played FROM standings);
+        SELECT (
+            SELECT max(matches_played) from standings
+            WHERE tourn = %s
+        ) = ALL (
+            SELECT matches_played FROM standings
+            WHERE tourn = %s
+        );
     '''
 
     conn = connect()
     cur = conn.cursor()
-    cur.execute(sql)
+    cur.execute(sql, (tourn, tourn))
     result = cur.fetchall()[0][0]
     conn.close()
     return result

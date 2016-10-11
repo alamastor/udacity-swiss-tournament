@@ -1,12 +1,14 @@
 -- Table definitions for the tournament project.
 
 
+-- Records all players registered in the system.
 CREATE TABLE players (
     id      serial PRIMARY KEY,
     name    varchar(40) NOT NULL
 );
 
 
+-- Records all tournaments in the system.
 CREATE TABLE tournaments (
     id      serial PRIMARY KEY,
     name    varchar(40) NOT NULL,
@@ -14,6 +16,7 @@ CREATE TABLE tournaments (
 );
 
 
+-- Records players registered in individual tournaments.
 CREATE TABLE tournament_players (
     tourn   integer REFERENCES tournaments NOT NULL,
     player  integer REFERENCES players (id) NOT NULL,
@@ -21,6 +24,8 @@ CREATE TABLE tournament_players (
 );
 
 
+-- Records the all matches played.
+-- Player0 must have greater value than Player1, to make it easier to check for uniqueness.
 CREATE TABLE matches (
     id      serial PRIMARY KEY,
     tourn   integer REFERENCES tournaments (id) NOT NULL,
@@ -35,10 +40,19 @@ CREATE TABLE matches (
 );
 
 
+-- Represents current standings.
 CREATE VIEW standings AS
-SELECT players.id, players.name, count(CASE WHEN players.id = matches.winner then 1 END) AS wins, count(matches.id) AS matches_played
-FROM players LEFT JOIN matches
-ON players.id = matches.player0
-OR players.id = matches.player1
-GROUP BY players.id
-ORDER BY wins DESC;
+SELECT id, name, wins, matches_played, tourn
+FROM players JOIN (
+    SELECT
+        tournament_players.player,
+        count(CASE WHEN tournament_players.player = matches.winner then 1 END) AS wins,
+        count(matches.id) AS matches_played,
+        tournament_players.tourn
+    FROM tournament_players LEFT JOIN matches
+    ON tournament_players.player = matches.player0
+    OR tournament_players.player = matches.player1
+    GROUP BY tournament_players.tourn, tournament_players.player
+) AS id_standings
+ON players.id = id_standings.player
+ORDER BY wins DESC, tourn;

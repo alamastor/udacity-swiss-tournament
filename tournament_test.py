@@ -54,6 +54,8 @@ def testCountTounamentPlayers():
     deleteMatches()
     deletePlayers()
     tournId = registerTournament('Grand Tournament')
+    otherTournId = registerTournament('Lesser Tournament')
+    registerPlayerForTournament(otherTournId, registerPlayer('Fool'))
     c = countTournamentPlayers(tournId)
     if c != 0:
         raise ValueError("After deletion, countPlayers should return zero.")
@@ -354,7 +356,7 @@ def testAllowOddPlayers():
         if not byeOccured:
             raise RuntimeError("No bye occured in round %i" % round_)
 
-    testSuccess("A bye occured every round as expeected.")
+    testSuccess("A bye occured every round as expected.")
 
 
 TEST_COUNT = 0
