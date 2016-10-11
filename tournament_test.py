@@ -213,6 +213,111 @@ def testPairings():
     testSuccess("After one match, players with one win are properly paired.")
 
 
+def testHaveAlreadyPlayed():
+    """
+        Test whether a haveAlreadyPlayed correctly identifies whether a match
+        has already occured.
+    """
+    deleteMatches()
+    deleteTournamentPlayers()
+    deleteTournaments()
+    deletePlayers()
+    player1 = registerPlayer('player 1')
+    player2 = registerPlayer('player 2')
+    tournId = registerTournament('Classic Tournament')
+    registerPlayerForTournament(tournId, player1)
+    registerPlayerForTournament(tournId, player2)
+
+    result = haveAlreadyPlayed(tournId, player1, player2)
+    if result:
+        raise ValueError(
+            "Have already played returned %s when it "
+            "should have returned False" % result
+        )
+    testSuccess("haveAlreadyPlayed showed returned False as expected")
+
+    reportMatch(tournId, player1, player2)
+    result = haveAlreadyPlayed(tournId, player1, player2)
+    if not result:
+        raise ValueError(
+            "Have already played returned %s when "
+            "it should have returned True" % result
+        )
+    testSuccess("haveAlreadyPlayed showed returned True as expected")
+
+
+
+def testNoRematches():
+    """
+        Test rematch does not occur, using naive matching a rematch will
+        occur, test this does not occur. Will not guatanee rematch cannot
+        happen but at least check algorithm is being applied.
+    """
+    deleteMatches()
+    deleteTournamentPlayers()
+    deleteTournaments()
+    deletePlayers()
+    tournId = registerTournament('Classic Tournament')
+    names = [
+        "Twilight Sparkle",
+        "Fluttershy",
+        "Applejack",
+        "Pinkie Pie",
+        "Rarity",
+        "Rainbow Dash"
+    ]
+    playerIds = []
+    for name in names:
+        playerIds.append(registerPlayer(name))
+
+    for id_ in playerIds:
+        registerPlayerForTournament(tournId, id_)
+
+    for round_ in range(1, 4):
+        pairs = swissPairings(tournId)
+        print(pairs)
+        for pair in pairs:
+            try:
+                reportMatch(tournId, pair[0], pair[2])
+            except psycopg2.IntegrityError:
+                raise ValueError(
+                    "Rematch occured in round %i between %s "
+                    "and %s" % (round_, pair[1], pair[3]))
+    testSuccess("No rematches occured.")
+
+
+def testHadBye():
+    return
+    """
+        Test whether a haveAlreadyPlayed correctly identifies whether a match
+        has already occured.
+    """
+    deleteMatches()
+    deleteTournamentPlayers()
+    deleteTournaments()
+    deletePlayers()
+    player1 = registerPlayer('player 1')
+    tournId = registerTournament('Classic Tournament')
+    registerPlayerForTournament(tournId, player1)
+
+    result = haveAlreadyPlayed(tournId, player1, player2)
+    if result:
+        raise ValueError(
+            "Have already played returned %s when it "
+            "should have returned False" % result
+        )
+    testSuccess("haveAlreadyPlayed showed returned False as expected")
+
+    reportMatch(tournId, player1, player2)
+    result = haveAlreadyPlayed(tournId, player1, player2)
+    if not result:
+        raise ValueError(
+            "Have already played returned %s when "
+            "it should have returned True" % result
+        )
+    testSuccess("haveAlreadyPlayed showed returned True as expected")
+
+
 TEST_COUNT = 0
 def testSuccess(msg):
     global TEST_COUNT;
@@ -226,4 +331,7 @@ if __name__ == '__main__':
     testStandingsBeforeMatches()
     testReportMatches()
     testPairings()
+    testHaveAlreadyPlayed()
+    testNoRematches()
+    testHadBye()
     print "Success!  All tests pass!"

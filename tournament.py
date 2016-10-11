@@ -4,6 +4,9 @@
 #
 
 import psycopg2
+import psycopg2.extras
+
+from mwmatching import maxWeightMatching
 
 
 def connect():
@@ -189,7 +192,7 @@ def playerStandings(tournId):
     '''
 
     conn = connect()
-    cur = conn.cursor()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.NamedTupleCursor)
     cur.execute(sql)
     results = cur.fetchall()
     conn.close()
@@ -205,13 +208,15 @@ def reportMatch(tourn, winner, loser):
     """
 
     sql = '''
-        INSERT INTO matches (tourn, winner, loser)
-        VALUES (%s, %s, %s);
+        INSERT INTO matches (tourn, player0, player1, winner)
+        VALUES (%s, %s, %s, %s);
     '''
+
+    player0, player1 = max(winner, loser), min(winner, loser)
 
     conn = connect()
     cur = conn.cursor()
-    cur.execute(sql, (tourn, winner, loser))
+    cur.execute(sql, (tourn, player0, player1, winner))
     conn.commit()
     conn.close()
 
@@ -239,23 +244,29 @@ def swissPairings(tournId):
         )
     standings = playerStandings(tournId)
 
-    sql = '''
-        SELECT id, name
-        FROM standings
-        ;
-    '''
+    # Generate edges
+    edges = []
+    # Iterate of all possible matchups.
+    for i in range(len(standings)):
+        for j in range(i + 1, len(standings)):
+            player = standings[i]
+            opponent = standings[j]
+            if not haveAlreadyPlayed(tournId, player.id, opponent.id):
+                # Using maximum weighted pairings algorithm,
+                # weight = matches_played - difference_in_wins, for fairest matches.
+                difference_in_wins = abs(player.wins - opponent.wins)
+                weight = player.matches_played - difference_in_wins
+                edges.append((i, j, weight))
 
-    conn = connect()
-    cur = conn.cursor()
-    cur.execute(sql)
-    result = []
-
-    pair = cur.fetchmany(2)
-    while pair:
-        player1, player2 = pair
-        result.append(player1 + player2)
-        pair = cur.fetchmany(2)
-    return result
+    matches_list = maxWeightMatching(edges, maxcardinality=True)
+    results = []
+    for player_idx, opponent_idx in enumerate(matches_list):
+        if player_idx > opponent_idx:
+            # Pair will have been created in previous iteration.
+            continue
+        player, opponent = standings[player_idx], standings[opponent_idx]
+        results.append((player.id, player.name, opponent.id, opponent.name))
+    return results
 
 
 def roundComplete():
@@ -272,6 +283,37 @@ def roundComplete():
     conn = connect()
     cur = conn.cursor()
     cur.execute(sql)
+    result = cur.fetchall()[0][0]
+    conn.close()
+    return result
+
+
+def haveAlreadyPlayed(tourn, playerA, playerB):
+    """Returns whether two players have already played.
+
+    Args:
+        tourn: tournament id
+        playerA: id of player
+        playerB: id of other player
+
+    Returns:
+        boolean: Have players played already?
+    """
+    sql = """
+        SELECT EXISTS (
+            SELECT *
+            FROM matches
+            WHERE tourn = %s
+            AND player0 = %s
+            AND player1 = %s
+        );
+    """
+
+    player0, player1 = max(playerA, playerB), min(playerA, playerB)
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql, (tourn, player0, player1))
     result = cur.fetchall()[0][0]
     conn.close()
     return result
