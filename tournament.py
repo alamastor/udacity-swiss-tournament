@@ -3,6 +3,8 @@
 # tournament.py -- implementation of a Swiss-system tournament
 #
 
+import random
+
 import psycopg2
 import psycopg2.extras
 
@@ -96,7 +98,6 @@ def countTournamentPlayers(tournId):
     result = cur.fetchone()[0]
     conn.close()
     return result
-    return 0
 
 
 def registerTournament(name):
@@ -199,12 +200,13 @@ def playerStandings(tournId):
     return results
 
 
-def reportMatch(tourn, winner, loser):
+def reportMatch(tourn, winner, loser=None):
     """Records the outcome of a single match between two players.
 
     Args:
       winner:  the id number of the player who won
-      loser:  the id number of the player who lost
+      loser:  the id number of the player who lost, if not passed will be
+        null, representing a bye
     """
 
     sql = '''
@@ -243,6 +245,26 @@ def swissPairings(tournId):
             'Round not complete, complete it before calling swissPairings'
         )
     standings = playerStandings(tournId)
+    pairings = []
+
+    # Give one player bye if neccesary.
+    if len(standings) % 2 != 0:
+        players = set(standings)
+        while players:
+            player = random.sample(players, 1)[0]
+            if not hadBye(tournId, player.id):
+                byePlayer = player
+                break
+            else:
+                players.remove(player)
+        else:
+            # For some all players have had bye, should never happen!
+            raise RuntimeError('Could not find player who has not had bye')
+
+        # Remove the bye player from standings list
+        standings.pop(standings.index(byePlayer))
+        pairings.append([byePlayer.id, byePlayer.name, None, None])
+
 
     # Generate edges
     edges = []
@@ -259,14 +281,13 @@ def swissPairings(tournId):
                 edges.append((i, j, weight))
 
     matches_list = maxWeightMatching(edges, maxcardinality=True)
-    results = []
     for player_idx, opponent_idx in enumerate(matches_list):
         if player_idx > opponent_idx:
             # Pair will have been created in previous iteration.
             continue
         player, opponent = standings[player_idx], standings[opponent_idx]
-        results.append((player.id, player.name, opponent.id, opponent.name))
-    return results
+        pairings.append((player.id, player.name, opponent.id, opponent.name))
+    return pairings
 
 
 def roundComplete():
@@ -314,6 +335,34 @@ def haveAlreadyPlayed(tourn, playerA, playerB):
     conn = connect()
     cur = conn.cursor()
     cur.execute(sql, (tourn, player0, player1))
+    result = cur.fetchall()[0][0]
+    conn.close()
+    return result
+
+
+def hadBye(tourn, player):
+    """Returns whether player has already had a bye.
+
+    Args:
+        tourn: tournament id
+        player: id of player
+
+    Returns:
+        boolean: Has player already had a bye?
+    """
+    sql = """
+        SELECT EXISTS (
+            SELECT *
+            FROM matches
+            WHERE tourn = %s
+            AND player0 = %s
+            AND player1 IS NULL
+        );
+    """
+
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute(sql, (tourn, player))
     result = cur.fetchall()[0][0]
     conn.close()
     return result

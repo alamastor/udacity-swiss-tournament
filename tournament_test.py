@@ -215,7 +215,7 @@ def testPairings():
 
 def testHaveAlreadyPlayed():
     """
-        Test whether a haveAlreadyPlayed correctly identifies whether a match
+        Test whether haveAlreadyPlayed correctly identifies whether a match
         has already occured.
     """
     deleteMatches()
@@ -231,19 +231,19 @@ def testHaveAlreadyPlayed():
     result = haveAlreadyPlayed(tournId, player1, player2)
     if result:
         raise ValueError(
-            "Have already played returned %s when it "
+            "haveAlreadyPlayed returned %s when it "
             "should have returned False" % result
         )
-    testSuccess("haveAlreadyPlayed showed returned False as expected")
+    testSuccess("haveAlreadyPlayed returned False as expected")
 
     reportMatch(tournId, player1, player2)
     result = haveAlreadyPlayed(tournId, player1, player2)
     if not result:
         raise ValueError(
-            "Have already played returned %s when "
+            "haveAlreadyPlayed returned %s when "
             "it should have returned True" % result
         )
-    testSuccess("haveAlreadyPlayed showed returned True as expected")
+    testSuccess("haveAlreadyPlayed returned True as expected")
 
 
 
@@ -275,7 +275,6 @@ def testNoRematches():
 
     for round_ in range(1, 4):
         pairs = swissPairings(tournId)
-        print(pairs)
         for pair in pairs:
             try:
                 reportMatch(tournId, pair[0], pair[2])
@@ -287,9 +286,8 @@ def testNoRematches():
 
 
 def testHadBye():
-    return
     """
-        Test whether a haveAlreadyPlayed correctly identifies whether a match
+        Test whether had correctly identifies whether a match
         has already occured.
     """
     deleteMatches()
@@ -300,22 +298,63 @@ def testHadBye():
     tournId = registerTournament('Classic Tournament')
     registerPlayerForTournament(tournId, player1)
 
-    result = haveAlreadyPlayed(tournId, player1, player2)
+    result = hadBye(tournId, player1)
     if result:
         raise ValueError(
-            "Have already played returned %s when it "
+            "hadBye returned %s when it "
             "should have returned False" % result
         )
-    testSuccess("haveAlreadyPlayed showed returned False as expected")
+    testSuccess("hadBye returned False as expected")
 
-    reportMatch(tournId, player1, player2)
-    result = haveAlreadyPlayed(tournId, player1, player2)
+    reportMatch(tournId, player1)
+    result = hadBye(tournId, player1)
     if not result:
         raise ValueError(
-            "Have already played returned %s when "
+            "hadBye returned %s when "
             "it should have returned True" % result
         )
-    testSuccess("haveAlreadyPlayed showed returned True as expected")
+    testSuccess("hadBye returned True as expected")
+
+
+def testAllowOddPlayers():
+    """
+        Test a bye is scheledued with odd players.
+    """
+    deleteMatches()
+    deleteTournamentPlayers()
+    deleteTournaments()
+    deletePlayers()
+    tournId = registerTournament('Classic Tournament')
+    names = [
+        "Twilight Sparkle",
+        "Fluttershy",
+        "Applejack",
+        "Pinkie Pie",
+        "Rarity"
+    ]
+    playerIds = []
+    for name in names:
+        playerIds.append(registerPlayer(name))
+
+    for id_ in playerIds:
+        registerPlayerForTournament(tournId, id_)
+
+    for round_ in range(1, 4):
+        byeOccured = False
+        pairs = swissPairings(tournId)
+        for pair in pairs:
+            if pair[3] is None:
+                byeOccured = True
+                if hadBye(tournId, pair[0]):
+                    raise RuntimeError(
+                        "Player %s got 2nd bye in "
+                        "round %i" % (pair[1], round_)
+                    )
+            reportMatch(tournId, pair[0], pair[2])
+        if not byeOccured:
+            raise RuntimeError("No bye occured in round %i" % round_)
+
+    testSuccess("A bye occured every round as expeected.")
 
 
 TEST_COUNT = 0
@@ -334,4 +373,5 @@ if __name__ == '__main__':
     testHaveAlreadyPlayed()
     testNoRematches()
     testHadBye()
+    testAllowOddPlayers()
     print "Success!  All tests pass!"
